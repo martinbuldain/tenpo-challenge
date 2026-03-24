@@ -153,6 +153,9 @@ En particular use Github Copilot, como agente usando 2 modelos:
  ## Docker Hub
 
 ```bash
+# Repositorio en Github
+https://github.com/martinbuldain/tenpo-challenge
+
 # Imagen publica disponible en:
 https://hub.docker.com/r/martinbuldain/tenpo-challenge
 

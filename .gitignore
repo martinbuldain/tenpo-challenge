@@ -21,3 +21,7 @@ temp/
 # OS artifacts
 .DS_Store
 
+# Generated/shaded binaries that should not be versioned
+org/testcontainers/
+*.class
+
