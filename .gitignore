@@ -1,0 +1,23 @@
+.vscode/
+.idea/
+
+bin/
+
+# Gradle / build outputs
+.gradle/
+build/
+out/
+
+# Logs and temp files
+logs/
+tmp/
+temp/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# OS artifacts
+.DS_Store
+

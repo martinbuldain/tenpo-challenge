@@ -1,0 +1,146 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
+}
+
+group = 'com.tenpo'
+version = '1.0.0'
+description = 'Tenpo Challenge'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    resilience4jVersion  = '2.2.0'
+    mockServerVersion    = '5.15.0'
+    testcontainersVersion = '1.21.3'
+    springdocVersion     = '2.6.0'
+    bucket4jVersion      = '8.14.0'
+}
+
+dependencies {
+    // Spring Boot WebFlux
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Spring Data R2DBC (acceso reactivo a PostgreSQL)
+    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    implementation 'org.postgresql:r2dbc-postgresql'
+
+    // JDBC + PostgreSQL SOLO para Flyway (no lo uso en la app) porque Flyway no soporta R2DBC; necesita JDBC para gestionar las migraciones.
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly    'org.postgresql:postgresql'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    // Spring Data Redis Reactivo (para caching y rate limiting)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+    // Resilience4j (Circuit Breaker reactivo)
+    implementation "io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}"
+    implementation "io.github.resilience4j:resilience4j-reactor:${resilience4jVersion}"
+
+    // Bucket4j + Redis Lettuce (Rate Limiting distribuido)
+    implementation "com.bucket4j:bucket4j_jdk17-core:${bucket4jVersion}"
+    implementation "com.bucket4j:bucket4j_jdk17-lettuce:${bucket4jVersion}"
+
+    // Actuator (para métricas, health checks, etc) - pero compatible con WebFlux
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation "org.springdoc:springdoc-openapi-starter-webflux-ui:${springdocVersion}"
+
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
+    compileOnly            'org.projectlombok:lombok'
+    annotationProcessor    'org.projectlombok:lombok'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testImplementation("org.mock-server:mockserver-netty:${mockServerVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-jdk14'
+    }
+    testImplementation("org.mock-server:mockserver-client-java:${mockServerVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-jdk14'
+    }
+    testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+// Unit tests (default): excluye cualquier test anotado con @Tag("integration")
+tasks.named('test') {
+    useJUnitPlatform {
+        excludeTags 'integration'
+    }
+    finalizedBy jacocoTestReport
+}
+
+// Integration tests: requiere Docker corriendo localmente
+tasks.register('integrationTest', Test) {
+    description = 'Corre los tests de integración (requiere Docker).'
+    group       = 'verification'
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    environment 'DOCKER_HOST',                           'unix:///var/run/docker.sock'
+    environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', '/var/run/docker.sock'
+    environment 'DOCKER_API_VERSION',                    '1.44'
+    systemProperty 'docker.host',   'unix:///var/run/docker.sock'
+    systemProperty 'api.version',   '1.44'
+    shouldRunAfter test
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required  = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/TenpoChallengeApplication.class',
+                '**/config/**',
+                '**/domain/dto/**',
+                '**/domain/enums/**',
+                '**/domain/entity/**'
+            ])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.74
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
