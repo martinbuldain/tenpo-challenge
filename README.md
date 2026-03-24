@@ -163,19 +163,35 @@ https://hub.docker.com/r/martinbuldain/tenpo-challenge
 docker pull martinbuldain/tenpo-challenge:latest
 
 # Levantar directamente desde Docker Hub (sin clonar el repo):
-curl -O https://raw.githubusercontent.com/<repo>/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/martinbuldain/tenpo-challenge/main/docker-compose.yml
 docker compose up -d
 ```
 ---
 
 ## Ejecucion
 
-### Remoto (es necesario tener docker corriendo)
+### Remoto (es necesario tener docker corriendo y Make instalado)
+
+**Con Make file:**
 ```bash
 make run-remote
 ```
 
 ### Local
+
+**Sin Make:**
+```bash
+git clone https://github.com/martinbuldain/tenpo-challenge.git
+cd tenpo-challenge
+
+docker compose up -d --wait
+
+# La APIs entonces vn a estar en:
+#   http://localhost:8080
+#   http://localhost:8080/swagger-ui.html
+#   http://localhost:8080/actuator/health
+```
+
 ```bash
 git clone <repo-url>
 cd tenpo-challenge
